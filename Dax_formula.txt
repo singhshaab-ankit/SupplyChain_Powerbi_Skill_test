@@ -1,0 +1,157 @@
+PHASE 3 – BEGINNER SCENARIOS
+
+High-Risk Suppliers (Table)
+
+->DAX
+1.HighRiskSuppliers =
+FILTER (
+    Suppliers,
+    Suppliers[Risk_Score] > 80
+        && Suppliers[Reliability_Rating] < 3
+)
+->
+
+---
+
+2️ Delayed Shipments (Measure)
+
+->DAX
+DelayedShipments =
+COUNTROWS (
+    FILTER ( Shipments, Shipments[Status] = "Delayed" )
+)
+
+
+---
+
+3.Inventory Stock Monitoring (Flag Column – optional)
+
+->DAX
+Stock_Below_Threshold =
+IF ( Warehouses[Stock_Level] < Warehouses[Min_Threshold], 1, 0 )
+->
+
+
+---
+
+PHASE 4 – INTERMEDIATE SCENARIOS
+
+4. Most Frequent Return Reasons (implicit count)
+
+Use directly in visual → *Values = Count of Return_ID* (no explicit DAX needed).
+
+---
+
+5. On-Time vs Delayed Shipments by Region
+
+->DAX
+OnTimeShipments =
+COUNTROWS (
+    FILTER ( Shipments, Shipments[Status] = "On Time" )
+)
+
+DelayedShipments =
+COUNTROWS (
+    FILTER ( Shipments, Shipments[Status] = "Delayed" )
+)
+->
+
+---
+
+6. Supplier Performance Dashboard Metrics
+
+->DAX
+AvgSupplierRisk =
+AVERAGE ( Suppliers[Risk_Score] )
+
+AvgDelayDays =
+AVERAGE ( Shipments[Delay_Days] )
+
+DefectRate =
+DIVIDE (
+    COUNTROWS ( FILTER ( Orders, Orders[Return_Reason] <> "-" ) ),
+    COUNTROWS ( Orders )
+)
+
+
+7.Dynamic KPI Metrics
+
+->DAX
+AvgDeliveryTime =
+AVERAGE ( Shipments[Delay_Days] )
+
+LateShipmentPct =
+DIVIDE (
+    COUNTROWS ( FILTER ( Shipments, Shipments[Status] = "Delayed" ) ),
+    COUNTROWS ( Shipments )
+)
+
+AvgSupplierRisk =
+AVERAGE ( Suppliers[Risk_Score] )
+8. Demand Forecasting (for line chart)
+
+No custom DAX required — use existing column
+`Warehouses[Demand_Forecast]`
+and enable Analytics Pane → Forecast → +Add → Forecast Next 3 Months.
+
+---
+
+ 🚀 PHASE 5 – ADVANCED SCENARIO
+
+9.Composite Supply Chain Risk Model
+
+->DAX
+CompositeRisk =
+( 0.4 *
+    AVERAGE ( Suppliers[Risk_Score] )
+)
++ ( 0.3 *
+    AVERAGE ( Shipments[Delay_Flag] )
+)
++ ( 0.2 *
+    AVERAGE ( Orders[Delivery_Flag] )
+)
++ ( 0.1 *
+    AVERAGEX (
+        Warehouses,
+        IF ( Warehouses[Stock_Level] < Warehouses[Min_Threshold], 1, 0 )
+    )
+)
+->
+
+---
+
+Additional Helper Columns
+
+ Delay Flag (for Shipments table)
+
+->DAX
+Delay_Flag =
+IF ( Shipments[Status] = "Delayed", 1, 0 )
+->
+
+ Delivery Flag (for Orders table)
+
+->DAX
+Delivery_Flag =
+IF ( Orders[Delivery_Status] = "Delayed", 1, 0 )
+->
+
+--------------------------------
+PHASE 6: DEBUGGING CHALLENGES
+1. Incorrect DAX Formula
+Given:
+LateShipmentPct = COUNTROWS(Shipments[Status] = "Delayed") / COUNTROWS(Shipments)
+
+Incorrect — because COUNTROWS() only takes a table, not a condition.
+-> Correct version:
+LateShipmentPct = 
+DIVIDE(
+    COUNTROWS(FILTER(Shipments, Shipments[Status] = "Delayed")),
+    COUNTROWS(Shipments)
+)
+________________________________________
+2. Incorrect Relationship
+Orders ↔ Shipments via Warehouse_ID is wrong.
+-> Should be linked by Order_ID, because one order can have one or more shipments.
+
